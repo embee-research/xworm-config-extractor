@@ -4,7 +4,8 @@ Configuration extractor for xworm
 Author: Matthew
 Twitter: @embee_research
 
-Sha256: 4281cc9058f285062ad116bc7d00eb36f7ac5c0509902836f6586597006bebbc
+Sha256: c80bbdff42a8264306fc386377873c9bf206657a4051f0412ae00f8e625add69
+Sha256: 57ff9c14ceef5ba31b75d8fde541fb37042255e51fb354150b37f7bf9851edd9
 
 Be sure to run this script in the same directory as "dnlib.dll"
 
@@ -12,15 +13,18 @@ usage: xworm-config-extractor.py xworm.bin
 
 Example Output:
 
-Host: 45.61.130.7
-Port: 1010
+Host: 89.117.72.230
+Port: 4000
 KEY: <123456789>
 SPL: <Xwormmm>
 Sleep: 3
 USBNM: USB.exe
-InstallDir: %AppData%
-Mutex: mUER53c9ZOF0vhKA
+InstallDir: %LocalAppData%
+Mutex: n68RPU0TRN0nWk35
 LoggerPath: temp\Log.tmp
+BTC: 3F9BwXXmgsNNbL5o7XyA7fJD25txcsDyow
+ETH: 0x9938A6dE353c60CfD2CF4ac8df4174E9350120e0
+TRC: TRC20_Address
 
 
 """
