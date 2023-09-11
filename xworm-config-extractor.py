@@ -4,8 +4,8 @@ Configuration extractor for xworm
 Author: Matthew
 Twitter: @embee_research
 
-Sha256: c80bbdff42a8264306fc386377873c9bf206657a4051f0412ae00f8e625add69
 Sha256: 57ff9c14ceef5ba31b75d8fde541fb37042255e51fb354150b37f7bf9851edd9
+Sha256: 1073ff4689cb536805d2881988b72853b029040f446af5ced18d1bc08b2266e1
 
 Be sure to run this script in the same directory as "dnlib.dll"
 
@@ -13,6 +13,9 @@ usage: xworm-config-extractor.py xworm.bin
 
 Example Output:
 
+Found Settings in: Settings
+Locating: Settings
+Found Mutex Value: n68RPU0TRN0nWk35
 Host: 89.117.72.230
 Port: 4000
 KEY: <123456789>
@@ -25,7 +28,6 @@ LoggerPath: temp\Log.tmp
 BTC: 3F9BwXXmgsNNbL5o7XyA7fJD25txcsDyow
 ETH: 0x9938A6dE353c60CfD2CF4ac8df4174E9350120e0
 TRC: TRC20_Address
-
 
 """
 
@@ -55,13 +57,32 @@ try:
 except:
     pass
 
-#Locate settings class
-for mtype in module.GetTypes():
-    if str(mtype.Name).endswith("Settings"):
-        print("Found Class: " + str(mtype.Name))
-        class_name = str(mtype.Name)
+constructor_ins = []
 
+#Attempt to locate the class containing settings
+for mtype in module.GetTypes():
+    target_type = module.Find(str(mtype.Name), isReflectionName=True)
+    if target_type:
+    #Enumerate settings constructor for initial encrypted config values
+        constructors = [m for m in target_type.Methods if m.Name in (".cctor", ".ctor")]
+        for constructor in constructors:
+            if constructor.HasBody:
+                ins = constructor.Body.Instructions
+                if len(ins) > 20 and len(ins) < 30:
+                    if "ldstr" in str(ins[0]):
+                        if "stsfld" in str(ins[1]):
+                            print("Found Settings in: " + str(mtype.Name))
+                            class_name = str(mtype.Name)
+                            constructor_ins = ins
+                    
+
+if not class_name:
+    print("Unable to find a suitable settings class")
+    sys.exit(1)
+    
+    
 #obtain a reference to the settings class
+print("Locating: " + str(class_name))
 target_type = module.Find(class_name, isReflectionName=True)
 
 config_dict = {}
@@ -72,6 +93,9 @@ if target_type:
     for constructor in constructors:
         if constructor.HasBody:
             ins = constructor.Body.Instructions
+            #print(len(ins))
+
+            
             for ptr in range(len(ins)):
                 config_name = str(ins[ptr]).split("::")[-1]
                 if "stsfld" in str(ins[ptr]):
@@ -93,11 +117,19 @@ if target_type:
                         #obtain string/base64 config values
                         value = ins[ptr-1].Operand
                         config_dict[config_name] = str(value)
-#print(config_dict)
 
-#Calculate md5 of Settings::Mutex
-#The md5 is used to create an AES key
-md5 = hashlib.md5(bytes(config_dict["Mutex"],'utf-8')).digest()
+
+#Locate the mutex
+for i in range(len(constructor_ins)):
+    ins = constructor_ins
+    if "ldstr" in str(ins[i]):
+        if len(str(ins[i]).split(" ")[-1]) == 18:
+            #print(ins[i])
+            mutex = str(ins[i]).split(" ")[-1].strip("\"")
+            print("Found Mutex Value: " + mutex)
+    
+#Create decryption key using mutex value         
+md5 = hashlib.md5(bytes(mutex,'utf-8')).digest()
 aes_key = bytearray([0]*32)
 aes_key[0:15] = md5[0:16]
 aes_key[15:32] = md5[0:16]
@@ -120,6 +152,8 @@ for key in config_dict.keys():
         #If unable to decrypt, print the original value
         print(str(key) + ": " + config_dict[key])
         pass
+
+
 
 
 
@@ -171,8 +205,6 @@ public static object Decrypt(string input)
 	byte[] array3 = Convert.FromBase64String(input);
 	return AlgorithmAES.UTF8BS(cryptoTransform.TransformFinalBlock(array3, 0, array3.Length));
 }
-
-
 
 
 
